@@ -1,5 +1,4 @@
-#include "hip/hip_runtime.h"
-#include <hip/hip_runtime.h>
+#include <cuda.h>
 #include <iostream>
 #include "const.h"
 #include "utils.h"
@@ -26,30 +25,30 @@ int main(int argc, char **argv) {
     }
     auto threads_per_block = block_dim_x * block_dim_y * block_dim_z;
 
-    hipDeviceProp_t props;
-    HIP_CHECK(hipGetDeviceProperties(&props, 0));
+    cudaDeviceProp props;
+    CUDA_CHECK(cudaGetDeviceProperties(&props, 0));
     std::cout << "Device name: " << props.name << std::endl;
     std::cout << "System major: " << props.major << std::endl;
     std::cout << "System minor: " << props.minor << std::endl;
     
-    hipEvent_t start, stop;
-    HIP_CHECK(hipEventCreate(&start));
-    HIP_CHECK(hipEventCreate(&stop));
+    cudaEvent_t start, stop;
+    CUDA_CHECK(cudaEventCreate(&start));
+    CUDA_CHECK(cudaEventCreate(&stop));
     float elapsed_time_ms;
     float *a = nullptr;
     
-    HIP_CHECK(hipMalloc(&a, sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&a, sizeof(float)));
     null_kernel<<<1, threads_per_block>>>(a);
-    HIP_CHECK(hipEventRecord(start));
+    CUDA_CHECK(cudaEventRecord(start));
     null_kernel<<<total_threads/threads_per_block, dim3(block_dim_x, block_dim_y, block_dim_z)>>>(a);
-    HIP_CHECK(hipEventRecord(stop));
-    HIP_CHECK(hipEventSynchronize(stop));
-    HIP_CHECK(hipEventElapsedTime(&elapsed_time_ms, start, stop));
+    CUDA_CHECK(cudaEventRecord(stop));
+    CUDA_CHECK(cudaEventSynchronize(stop));
+    CUDA_CHECK(cudaEventElapsedTime(&elapsed_time_ms, start, stop));
     std::cout << "Elapsed time: " << elapsed_time_ms << " ms" << std::endl;
     std::cout << "Totals: " << total_threads << "threads, ";
     std::cout << "dim3(" << block_dim_x << ", " << block_dim_y << ", " << block_dim_z << ") ";
     std::cout << total_threads / elapsed_time_ms * 1000 / kSclk << " Threads/Cycle" << std::endl;
 
-    HIP_CHECK(hipFree(a));
+    CUDA_CHECK(cudaFree(a));
     return 0;
 }

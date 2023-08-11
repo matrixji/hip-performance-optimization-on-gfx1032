@@ -15,10 +15,10 @@
 Radeon RX 6600 属于RDNA2的架构，ROCm也是从5.6 开始有了比较好的支持，但是实际上应该还是有很多的问题。这里不一一赘述了，总而言之，要想学习GPU编程或者深度学习还是用NVIDIA的卡吧，没必要和自己过不去。当然也希望ROCm社区能够加强软件的成熟度，也能为大家提供一个除了CUDA之外的选择。
 
 ## 硬件频率
-原文使用的是Mi25的显卡，锁定了1.536Ghz的频率。但是RDNA的卡光是锁屏这件事情，就很麻烦，幸好有大神写了脚本 [sibradzic/amdgpu-clocks](https://github.com:sibradzic/amdgpu-clocks.git) 我们拿来使用就行了，主要分两步：
+原文使用的是Mi25的显卡，锁定了1.536Ghz的频率。但是RDNA的卡光是锁频这件事情，就很麻烦，幸好有大神写了脚本 [sibradzic/amdgpu-clocks](https://github.com:sibradzic/amdgpu-clocks.git) 我们拿来使用就行了，主要分两步：
 
 1. 通过修改Grub参数让显卡支持手动设置频率，Kernel启动参数需要加上 `amdgpu.ppfeaturemask=0xfff7ffff` 然后重新生成Grub，重启即可，配置成功后，你应该能够看到 `/sys/class/drm/card0/device/pp_od_clk_voltage` 文件是存在的。
-2. 配置一个 `/etc/default/amdgpu-custom-state.card0` 的配置文件，来设置SCLK，在使用 `amdgpu-clock` 来锁屏。
+2. 配置一个 `/etc/default/amdgpu-custom-state.card0` 的配置文件，来设置SCLK，在使用 `amdgpu-clock` 来锁频。
 
 下面是我的配置文件，可以参考一下：
 
@@ -52,7 +52,7 @@ __global__ void null_kernel(float * __restrict__ a) {
 }
 ```
 
-因此程序设置总的Threads 数量为 1024*1204*1024, 已获得接近秒级的GPU执行时间。
+因此程序设置总的Threads 数量为 1024 * 1204 * 1024, 已获得接近秒级的GPU执行时间。
 Threads速率是否与Block速率相关？这仍然是一个谜。因此测试程序暂时将每个 Block的Threads设置为最大值 1024。
 
 为了获得准备的时间， 使用hipEventCreate函数产生两个事件 start, stop,通过hipEventRecord记录两个事件，并调用hipEventSynchronize确保stop是同步事件并被正确执行，hipEventElapsedTime(&elapsed_time_ms, start, stop)函数将获得start, stop两个event的时间长度，单位是毫秒。代码如下：
@@ -101,7 +101,7 @@ Totals: 1073741824threads, dim3(1024, 1, 1) 42.4215 Threads/Cycle
 
 > 这个测试结果是否有值得怀疑的地方？ 这个测试结果证明只有BlockDim =256才能达到理论极限，和AMD GCN的图形像素渲染能力不匹配，颜色渲染能力达到了64 Pixels/Cycle。GCN架构的Pixel Shader都是64个 像素一个Wave，换而言之HIP 也应该能够达到64 Threads/Cycle。而测试结果只有Pixel Shader的1/4，这有两种可能： 1） ROCm使用了特别的寄存器设置使得线程产生速度降低到了1/4；2）硬件的计算线程生成速度是像素着色器的1/4速度。第二个原因的可能性比较小，GCN统一化的着色器架构设计应保证不同类型的着色器（几何，像素，计算）线程速度相同， 否则对应硬件资源将被浪费。
 
-上述是原文中关于这一结果展开解释和分析。个人认为最重要的一点知道Block Dim在256整数倍的时候能够达到最佳的线程生成速率就足够指导一部分的程序优化工作了。当然这上面说的是GCN的架构，至少在RX6600上我们先测试得到的结论是64的整数倍。
+上述是原文中关于这一结果展开解释和分析。个人认为最重要的一点知道Block Dim在256整数倍的时候能够达到最佳的线程生成速率就足够指导一部分的程序优化工作了。当然这上面说的是GCN的架构，至少在RX6600上我们现在测试得到的结论是64的整数倍最佳。
 
 ### 2D 形状Block线程速率
 如法炮制，我们组合不同的BlockDim，得到如下结果：
