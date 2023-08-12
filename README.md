@@ -138,3 +138,14 @@ Totals: 1073741824threads, dim3(10, 10, 10) 41.3719 Threads/Cycle
 ### 思考
 
 对于CUDA来说，上面的结论该是如何？RTX的卡和Tesla系列是否有差别？我们需要去实践测试验证了。
+
+#### NVIDIA卡的锁频
+相对来说N的锁频操作简单多了，只需要使用 `sudo nvidia-smi -lgc 1000` 就可以设置强制1000Mhz了。这个操作需要root权限，而且在重启后会失效，除非设置了pm是1（`sudo nvidia-smi -pm 1` 但是不推荐）。可以通过 `sudo nvidia-smi -rgc` 来恢复频率的默认设置。
+
+#### NVIDIA卡的线程生成速率
+我已经把代码放在了 [test-02-01.cu](cuda/test-02-01.cu) 中，直接编译运行即可。事实上你可以发现`src`中的hip代码是可以通过`cuda`中的cu代码转换过来的（使用 hipify）
+
+实验过程略，直接先看结果，在3080Ti上的表现参考如下（CUDA 11.8）：
+![threads-per-cycle-3080ti](images/threads-per-cycle-3080ti.png)
+
+在BlockDim为 768的时候，能够得到450Threads/Cycle。这性能对比之下是不是有点恐怖如斯了。
